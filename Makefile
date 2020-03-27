@@ -44,11 +44,17 @@ fmt-check:
 	fi;
 
 $(CMD):
-	go build -o bin/$@/falcon-$@ ./modules/$@
+	if [ $@ = "gateway" ]; then \
+		go build -ldflags "-X main.BinaryName=gateway -X main.GitCommit=`git rev-parse --short HEAD` -X main.Version=$(VERSION)" \
+			-o bin/gateway/falcon-gateway ./modules/transfer ; \
+	else \
+		go build -ldflags "-X main.BinaryName=$@ -X main.GitCommit=`git rev-parse --short HEAD` -X main.Version=$(VERSION)" \
+			-o bin/$@/falcon-$@ ./modules/$@ ; \
+	fi
 
 .PHONY: $(TARGET)
 $(TARGET): $(GOFILES)
-	go build -ldflags "-X main.GitCommit=`git rev-parse --short HEAD` -X main.Version=$(VERSION)" -o open-falcon
+	go build -ldflags "-X main.BinaryName=Open-Falcon -X main.GitCommit=`git rev-parse --short HEAD` -X main.Version=$(VERSION)" -o open-falcon
 
 checkbin: bin/ config/ open-falcon
 
@@ -62,14 +68,36 @@ pack: checkbin
 	@$(foreach var,$(CMD),cp ./bin/$(var)/falcon-$(var) ./out/$(var)/bin;)
 	@cp -r ./modules/agent/public ./out/agent/
 	@(cd ./out && ln -s ./agent/public/ ./public)
-	@cp -r ./modules/agent/plugins ./out/agent/
-	@(cd ./out && ln -s ./agent/plugins/ ./plugins)
+	@(cd ./out && mkdir -p ./agent/plugin && ln -s ./agent/plugin/ ./plugin)
 	@cp -r ./modules/api/data ./out/api/
 	@mkdir out/graph/data
 	@bash ./config/confgen.sh
 	@cp $(TARGET) ./out/$(TARGET)
 	tar -C out -zcf open-falcon-v$(VERSION).tar.gz .
 	@rm -rf out
+
+pack4docker: checkbin
+	@if [ -e out ] ; then rm -rf out; fi
+	@mkdir out
+	@$(foreach var,$(CMD),mkdir -p ./out/$(var)/bin;)
+	@$(foreach var,$(CMD),mkdir -p ./out/$(var)/config;)
+	@$(foreach var,$(CMD),mkdir -p ./out/$(var)/logs;)
+	@$(foreach var,$(CMD),cp ./config/$(var).json ./out/$(var)/config/cfg.json;)
+	@$(foreach var,$(CMD),cp ./bin/$(var)/falcon-$(var) ./out/$(var)/bin;)
+	@cp -r ./modules/agent/public ./out/agent/
+	@(cd ./out && ln -s ./agent/public/ ./public)
+	@(cd ./out && mkdir -p ./agent/plugin && ln -s ./agent/plugin/ ./plugin)
+	@cp -r ./modules/api/data ./out/api/
+	@mkdir out/graph/data
+	@bash ./docker/confgen4docker.sh
+	@cp ./docker/ctrl.sh ./out/ && chmod +x ./out/ctrl.sh
+	@cp $(TARGET) ./out/$(TARGET)
+	tar -C out -zcf open-falcon-v$(VERSION).tar.gz .
+	@rm -rf out
+
+.PHONY: test
+test:
+	@go test ./modules/api/test
 
 clean:
 	@rm -rf ./bin

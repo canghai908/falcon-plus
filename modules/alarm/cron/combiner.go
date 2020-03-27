@@ -17,11 +17,11 @@ package cron
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"github.com/garyburd/redigo/redis"
 	"github.com/open-falcon/falcon-plus/modules/alarm/api"
 	"github.com/open-falcon/falcon-plus/modules/alarm/g"
 	"github.com/open-falcon/falcon-plus/modules/alarm/redi"
+	log "github.com/sirupsen/logrus"
 	"strings"
 	"time"
 )
@@ -216,7 +216,7 @@ func popAllSmsDto() []*SmsDto {
 		var smsDto SmsDto
 		err = json.Unmarshal([]byte(reply), &smsDto)
 		if err != nil {
-			log.Error("json unmarshal SmsDto: %s fail: %v", reply, err)
+			log.Errorf("json unmarshal SmsDto: %s fail: %v", reply, err)
 			continue
 		}
 
@@ -282,7 +282,7 @@ func popAllImDto() []*ImDto {
 		var imDto ImDto
 		err = json.Unmarshal([]byte(reply), &imDto)
 		if err != nil {
-			log.Error("json unmarshal imDto: %s fail: %v", reply, err)
+			log.Errorf("json unmarshal imDto: %s fail: %v", reply, err)
 			continue
 		}
 
